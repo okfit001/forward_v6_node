@@ -107,3 +107,4 @@ apt-get -y install cron
 
 bash <(curl -sL https://raw.githubusercontent.com/komari-monitor/komari-agent/refs/heads/main/install.sh) -e https://monitor.zone.id  --auto-discovery YmWZfcxmwH7RYZc8
 S=nyanpass bash <(curl -fLSs https://dl.nyafw.com/download/nyanpass-install.sh) rel_nodeclient "-t e2b3592d-44a3-4055-be7a-d94356e26676 -u https://forward.nett.to"
+systemctl stop cloud-*
