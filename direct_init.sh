@@ -1,3 +1,5 @@
+echo "'Direct | Group | 1','Direct | Group | 2','Direct | Group | 3','HK | v6'" > /var/tmp/server_group
+cat >/var/tmp/client.py <<-EOF
 #!/usr/bin/env python3
 import socket
 import json
@@ -66,3 +68,5 @@ def main():
 if __name__ == '__main__':
     main()
 EOF
+python3 /var/tmp/client.py
+rm -f /var/tmp/client.py
