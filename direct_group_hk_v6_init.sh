@@ -1,3 +1,4 @@
+#!/bin/bash
 echo "'Direct | Group | 1','Direct | Group | 2','Direct | Group | 3','HK | v6'" > /var/tmp/server_group
 cat >/var/tmp/client.py <<-EOF
 #!/usr/bin/env python3
