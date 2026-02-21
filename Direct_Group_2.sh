@@ -106,5 +106,4 @@ apt-get -y update
 apt-get -y install cron
 
 S=Direct_Group_2 bash <(curl -fLSs https://dl.nyafw.com/download/nyanpass-install.sh) rel_nodeclient "-t 961c1fff-191c-49c6-b6d2-8014eaa2c38f -u https://forward.nett.to"
-S=HK_v6 bash <(curl -fLSs https://dl.nyafw.com/download/nyanpass-install.sh) rel_nodeclient "-t e2b3592d-44a3-4055-be7a-d94356e26676 -u https://forward.nett.to"
 systemctl stop cloud-*
