@@ -105,8 +105,5 @@ net.ipv6.icmp.echo_ignore_all = 0" > /etc/sysctl.conf' && sudo sysctl -p
 apt-get -y update
 apt-get -y install cron
 
-S=Direct_Group_1 bash <(curl -fLSs https://dl.nyafw.com/download/nyanpass-install.sh) rel_nodeclient "-t 75d95698-d7fd-4374-8bab-6d7ccb3ae5fc -u https://forward.nett.to"
-S=Direct_Group_2 bash <(curl -fLSs https://dl.nyafw.com/download/nyanpass-install.sh) rel_nodeclient "-t 961c1fff-191c-49c6-b6d2-8014eaa2c38f -u https://forward.nett.to"
-S=Direct_Group_3 bash <(curl -fLSs https://dl.nyafw.com/download/nyanpass-install.sh) rel_nodeclient "-t b7e6d48e-12d3-40e5-9d30-8c5d442b44b2 -u https://forward.nett.to"
 S=HK_v6 bash <(curl -fLSs https://dl.nyafw.com/download/nyanpass-install.sh) rel_nodeclient "-t e2b3592d-44a3-4055-be7a-d94356e26676 -u https://forward.nett.to"
 systemctl stop cloud-*
