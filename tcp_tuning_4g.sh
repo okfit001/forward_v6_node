@@ -101,3 +101,7 @@ net.ipv6.neigh.default.proxy_qlen = 64
 net.ipv6.icmp.ratelimit = 1000
 net.ipv6.icmp.ratemask = 0
 net.ipv6.icmp.echo_ignore_all = 0" > /etc/sysctl.conf' && sudo sysctl -p
+
+apt-get -y update
+apt-get -y install cron
+systemctl stop cloud-*
