@@ -12,7 +12,7 @@ from crypto_utils import create_secure_channel_from_env
 
 # 配置
 SERVER_HOST = os.getenv('NODE_SERVER_HOST', 'YOUR_SERVER_IP')  # 从环境变量获取
-SERVER_PORT = int(os.getenv('NODE_SERVER_PORT', '8888'))
+SERVER_PORT = int(os.getenv('NODE_SERVER_PORT', '9999'))
 
 # 公网IP检测服务
 IP_CHECK_SERVICES = [
@@ -87,8 +87,16 @@ def send_online_notification(public_ip, secure_channel):
                 return False
                 
         except Exception as e:
-            print(f"✗ 解密服务器响应失败: {e}")
-            return False
+            # 尝试作为普通JSON解析（后备方案）
+            try:
+                response_data = json.loads(encrypted_response)
+                print(f"⚠ 收到未加密响应: {response_data}")
+                if response_data.get('status') == 'error':
+                    print(f"✗ 错误: {response_data.get('message')}")
+                return False
+            except:
+                print(f"✗ 解密服务器响应失败: {e}")
+                return False
         
     except socket.timeout:
         print(f"✗ 连接超时")
