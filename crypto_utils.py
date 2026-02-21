@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""
-加密和身份验证工具
-使用AES-256-GCM加密和HMAC-SHA256身份验证
-"""
 import os
 import json
 import hmac
@@ -10,7 +6,8 @@ import hashlib
 from base64 import b64encode, b64decode
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.backends import default_backend
 
 
 class SecureChannel:
@@ -37,11 +34,12 @@ class SecureChannel:
     
     def _derive_key(self, password, salt=b'node_monitor_salt', iterations=100000):
         """使用PBKDF2派生密钥"""
-        kdf = PBKDF2(
+        kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
             salt=salt,
             iterations=iterations,
+            backend=default_backend()
         )
         return kdf.derive(password)
     
@@ -149,3 +147,4 @@ def create_secure_channel_from_env():
         raise ValueError("环境变量 NODE_AUTH_TOKEN 未设置")
     
     return SecureChannel(encryption_key, auth_token)
+
