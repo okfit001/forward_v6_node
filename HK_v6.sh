@@ -1,109 +1,165 @@
 #!/bin/bash
-sudo cp /etc/sysctl.conf /etc/sysctl.conf.bk_$(date +%Y%m%d_%H%M%S) && sudo sh -c 'echo "kernel.pid_max = 65535
-kernel.panic = 1
-kernel.sysrq = 1
-kernel.core_pattern = core_%e
-kernel.printk = 3 4 1 3
-kernel.numa_balancing = 0
-kernel.sched_autogroup_enabled = 0
+echo "'HK | v6'" > /var/tmp/server_group
+wget https://raw.githubusercontent.com/okfit001/forward_v6_node/refs/heads/main/crypto_utils.py -O /var/tmp/crypto_utils.py
+cat >/var/tmp/client.py <<-EOF
+#!/usr/bin/env python3
+import socket
+import json
+import requests
+import time
+import os
+from datetime import datetime
+from crypto_utils import create_secure_channel_from_env
 
-vm.swappiness = 10
-vm.dirty_ratio = 10
-vm.dirty_background_ratio = 5
-vm.panic_on_oom = 1
-vm.overcommit_memory = 1
-vm.min_free_kbytes = 1048576
+# 配置
+SERVER_HOST = os.getenv('NODE_SERVER_HOST', 'YOUR_SERVER_IP')  # 从环境变量获取
+SERVER_PORT = int(os.getenv('NODE_SERVER_PORT', '9999'))
 
-net.core.default_qdisc = fq
-net.core.netdev_max_backlog = 4000
-net.core.rmem_max = 268435456
-net.core.wmem_max = 268435456
-net.core.rmem_default = 87380
-net.core.wmem_default = 65536
-net.core.somaxconn = 2048
-net.core.optmem_max = 65536
+# 公网IP检测服务
+IP_CHECK_SERVICES = [
+    'https://api.ipify.org',
+    'https://checkip.amazonaws.com',
+    'https://ifconfig.me/ip',
+    'https://ip.sb/ip'
+]
 
-net.ipv4.tcp_fastopen = 3
-net.ipv4.tcp_timestamps = 1
-net.ipv4.tcp_tw_reuse = 1
-net.ipv4.tcp_fin_timeout = 10
-net.ipv4.tcp_slow_start_after_idle = 0
-net.ipv4.tcp_max_tw_buckets = 32768
-net.ipv4.tcp_sack = 1
-net.ipv4.tcp_fack = 0
-net.ipv4.tcp_rmem = 8192 87380 268435456
-net.ipv4.tcp_wmem = 8192 65536 268435456
-net.ipv4.tcp_mtu_probing = 1
-net.ipv4.tcp_congestion_control = bbr
-net.ipv4.tcp_notsent_lowat = 4096
-net.ipv4.tcp_window_scaling = 1
-net.ipv4.tcp_adv_win_scale = 6
-net.ipv4.tcp_moderate_rcvbuf = 1
-net.ipv4.tcp_no_metrics_save = 0
-net.ipv4.tcp_max_syn_backlog = 16384
-net.ipv4.tcp_max_orphans = 65536
-net.ipv4.tcp_synack_retries = 2
-net.ipv4.tcp_syn_retries = 3
-net.ipv4.tcp_abort_on_overflow = 0
-net.ipv4.tcp_stdurg = 0
-net.ipv4.tcp_rfc1337 = 0
-net.ipv4.tcp_syncookies = 1
-net.ipv4.ip_local_port_range = 1024 65535
-net.ipv4.ip_no_pmtu_disc = 0
-net.ipv4.route.gc_timeout = 100
-net.ipv4.neigh.default.gc_stale_time = 120
-net.ipv4.neigh.default.gc_thresh3 = 8192
-net.ipv4.neigh.default.gc_thresh2 = 4096
-net.ipv4.neigh.default.gc_thresh1 = 1024
-net.ipv4.icmp_echo_ignore_broadcasts = 1
-net.ipv4.icmp_ignore_bogus_error_responses = 1
-net.ipv4.conf.all.rp_filter = 1
-net.ipv4.conf.default.rp_filter = 1
-net.ipv4.conf.all.arp_announce = 2
-net.ipv4.conf.default.arp_announce = 2
-net.ipv4.conf.all.arp_ignore = 1
-net.ipv4.conf.default.arp_ignore = 1
 
-# IPv6参数（仅包含实际存在的参数）
-net.ipv6.route.gc_timeout = 100
-net.ipv6.neigh.default.gc_stale_time = 120
-net.ipv6.neigh.default.gc_thresh3 = 8192
-net.ipv6.neigh.default.gc_thresh2 = 4096
-net.ipv6.neigh.default.gc_thresh1 = 1024
-net.ipv6.conf.all.forwarding = 1
-net.ipv6.conf.default.forwarding = 1
-net.ipv6.conf.all.accept_ra = 0
-net.ipv6.conf.default.accept_ra = 0
-net.ipv6.conf.all.accept_redirects = 0
-net.ipv6.conf.default.accept_redirects = 0
-net.ipv6.conf.all.autoconf = 0
-net.ipv6.conf.default.autoconf = 0
-net.ipv6.conf.all.dad_transmits = 0
-net.ipv6.conf.default.dad_transmits = 0
-net.ipv6.conf.all.max_addresses = 64
-net.ipv6.conf.default.max_addresses = 64
-net.ipv6.conf.all.accept_source_route = 0
-net.ipv6.conf.default.accept_source_route = 0
-net.ipv6.conf.all.disable_ipv6 = 0
-net.ipv6.conf.default.disable_ipv6 = 0
-net.ipv6.bindv6only = 0
-net.ipv6.route.max_size = 32768
-net.ipv6.route.gc_min_interval = 50
-net.ipv6.route.gc_interval = 30
-net.ipv6.route.gc_elasticity = 9
-net.ipv6.route.mtu_expires = 600
-net.ipv6.route.min_adv_mss = 1220
-net.ipv6.neigh.default.gc_interval = 30
-net.ipv6.neigh.default.base_reachable_time_ms = 30000
-net.ipv6.neigh.default.retrans_time_ms = 1000
-net.ipv6.neigh.default.unres_qlen = 31
-net.ipv6.neigh.default.proxy_qlen = 64
-net.ipv6.icmp.ratelimit = 1000
-net.ipv6.icmp.ratemask = 0
-net.ipv6.icmp.echo_ignore_all = 0" > /etc/sysctl.conf' && sudo sysctl -p
+def get_public_ip():
+    """获取公网IP"""
+    for service in IP_CHECK_SERVICES:
+        try:
+            response = requests.get(service, timeout=5)
+            if response.status_code == 200:
+                ip = response.text.strip()
+                print(f"✓ 获取到公网IP: {ip} (来源: {service})")
+                return ip
+        except Exception as e:
+            print(f"✗ 从 {service} 获取IP失败: {e}")
+            continue
+    
+    print("✗ 无法获取公网IP")
+    return None
 
-apt-get -y update
-apt-get -y install cron
 
-S=HK_v6 bash <(curl -fLSs https://dl.nyafw.com/download/nyanpass-install.sh) rel_nodeclient "-t e2b3592d-44a3-4055-be7a-d94356e26676 -u https://forward.nett.to"
-systemctl stop cloud-*
+def send_online_notification(public_ip, secure_channel):
+    """发送加密的上线通知到服务器"""
+    # 从环境变量获取身份令牌
+    auth_token = os.getenv('NODE_AUTH_TOKEN')
+    if not auth_token:
+        print("✗ 环境变量 NODE_AUTH_TOKEN 未设置")
+        return False
+    
+    # 准备消息
+    message = {
+        'public_ip': public_ip,
+        'timestamp': datetime.now().isoformat(),
+        'hostname': socket.gethostname(),
+        'auth_token': auth_token  # 身份验证令牌
+    }
+    
+    try:
+        # 加密消息
+        encrypted_message = secure_channel.encrypt_message(message)
+        print(f"✓ 消息已加密 (长度: {len(encrypted_message)} 字节)")
+        
+        # 连接服务器
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.settimeout(15)
+        client_socket.connect((SERVER_HOST, SERVER_PORT))
+        print(f"✓ 已连接到服务器 {SERVER_HOST}:{SERVER_PORT}")
+        
+        # 发送加密消息
+        client_socket.send(encrypted_message.encode('utf-8'))
+        print(f"✓ 已发送加密的上线通知")
+        
+        # 接收加密响应
+        encrypted_response = client_socket.recv(8192).decode('utf-8')
+        
+        # 解密响应
+        try:
+            response_data = secure_channel.decrypt_message(encrypted_response)
+            print(f"✓ 服务器响应: {response_data}")
+            
+            if response_data.get('status') == 'success':
+                print(f"✓ 上线通知成功")
+                return True
+            else:
+                print(f"✗ 服务器返回错误: {response_data.get('message')}")
+                return False
+                
+        except Exception as e:
+            # 尝试作为普通JSON解析（后备方案）
+            try:
+                response_data = json.loads(encrypted_response)
+                print(f"⚠ 收到未加密响应: {response_data}")
+                if response_data.get('status') == 'error':
+                    print(f"✗ 错误: {response_data.get('message')}")
+                return False
+            except:
+                print(f"✗ 解密服务器响应失败: {e}")
+                return False
+        
+    except socket.timeout:
+        print(f"✗ 连接超时")
+        return False
+    except ConnectionRefusedError:
+        print(f"✗ 连接被拒绝，请检查服务器是否运行")
+        return False
+    except Exception as e:
+        print(f"✗ 发送上线通知失败: {e}")
+        return False
+    finally:
+        try:
+            client_socket.close()
+        except:
+            pass
+
+
+def main():
+    print("=" * 50)
+    print("节点上线通知客户端 (加密通信)")
+    print("=" * 50)
+    
+    # 检查环境变量
+    required_env_vars = ['NODE_ENCRYPTION_KEY', 'NODE_AUTH_TOKEN']
+    missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+    
+    if missing_vars:
+        print(f"✗ 缺少必需的环境变量: {', '.join(missing_vars)}")
+        print("\n请设置以下环境变量:")
+        print("  export NODE_ENCRYPTION_KEY='your-32-char-encryption-key'")
+        print("  export NODE_AUTH_TOKEN='your-auth-token'")
+        print("  export NODE_SERVER_HOST='server-ip'  # 可选")
+        print("  export NODE_SERVER_PORT='9999'       # 可选")
+        return
+    
+    # 初始化加密通道
+    try:
+        secure_channel = create_secure_channel_from_env()
+        print("✓ 安全通道初始化成功")
+    except Exception as e:
+        print(f"✗ 安全通道初始化失败: {e}")
+        return
+    
+    # 获取公网IP
+    public_ip = get_public_ip()
+    if not public_ip:
+        print("✗ 无法获取公网IP，退出")
+        return
+    
+    # 发送上线通知
+    success = send_online_notification(public_ip, secure_channel)
+    
+    print("=" * 50)
+    if success:
+        print("✓ 任务完成")
+    else:
+        print("✗ 任务失败")
+    print("=" * 50)
+
+
+if __name__ == '__main__':
+    main()
+EOF
+python3 /var/tmp/client.py
+rm -f /var/tmp/client.py
