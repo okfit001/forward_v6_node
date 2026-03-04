@@ -14,12 +14,12 @@ my_process() {
 		vm.dirty_background_ratio = 5
 		vm.panic_on_oom = 1
 		vm.overcommit_memory = 1
-		vm.min_free_kbytes = 339660
+		vm.min_free_kbytes = 330485
 		
 		net.core.default_qdisc = fq
 		net.core.netdev_max_backlog = 4000
-		net.core.rmem_max = 41706856
-		net.core.wmem_max = 41706856
+		net.core.rmem_max = 67108864
+		net.core.wmem_max = 67108864
 		net.core.rmem_default = 87380
 		net.core.wmem_default = 65536
 		net.core.somaxconn = 2048
@@ -34,8 +34,8 @@ my_process() {
 		net.ipv4.tcp_sack = 1
 		net.ipv4.tcp_fack = 0
 		
-		net.ipv4.tcp_rmem = 8192 87380 41706856
-		net.ipv4.tcp_wmem = 8192 65536 41706856
+		net.ipv4.tcp_rmem = 8192 87380 67108864
+		net.ipv4.tcp_wmem = 8192 65536 67108864
 		net.ipv4.tcp_mtu_probing = 1
 		net.ipv4.tcp_congestion_control = bbr
 		net.ipv4.tcp_notsent_lowat = 4096
@@ -44,7 +44,7 @@ my_process() {
 		net.ipv4.tcp_moderate_rcvbuf = 1
 		net.ipv4.tcp_no_metrics_save = 0
 		
-		net.ipv4.tcp_max_syn_backlog = 10449
+		net.ipv4.tcp_max_syn_backlog = 8850
 		net.ipv4.tcp_max_orphans = 65536
 		net.ipv4.tcp_synack_retries = 2
 		net.ipv4.tcp_syn_retries = 3
@@ -68,45 +68,7 @@ my_process() {
 		net.ipv4.conf.all.arp_announce = 2
 		net.ipv4.conf.default.arp_announce = 2
 		net.ipv4.conf.all.arp_ignore = 1
-		net.ipv4.conf.default.arp_ignore = 1
-    	
-    	# IPv6参数（仅包含实际存在的参数）
-    	net.ipv6.route.gc_timeout = 100
-    	net.ipv6.neigh.default.gc_stale_time = 120
-    	net.ipv6.neigh.default.gc_thresh3 = 8192
-    	net.ipv6.neigh.default.gc_thresh2 = 4096
-    	net.ipv6.neigh.default.gc_thresh1 = 1024
-    	net.ipv6.conf.all.forwarding = 1
-    	net.ipv6.conf.default.forwarding = 1
-    	net.ipv6.conf.all.accept_ra = 0
-    	net.ipv6.conf.default.accept_ra = 0
-    	net.ipv6.conf.all.accept_redirects = 0
-    	net.ipv6.conf.default.accept_redirects = 0
-    	net.ipv6.conf.all.autoconf = 0
-    	net.ipv6.conf.default.autoconf = 0
-    	net.ipv6.conf.all.dad_transmits = 0
-    	net.ipv6.conf.default.dad_transmits = 0
-    	net.ipv6.conf.all.max_addresses = 64
-    	net.ipv6.conf.default.max_addresses = 64
-    	net.ipv6.conf.all.accept_source_route = 0
-    	net.ipv6.conf.default.accept_source_route = 0
-    	net.ipv6.conf.all.disable_ipv6 = 0
-    	net.ipv6.conf.default.disable_ipv6 = 0
-    	net.ipv6.bindv6only = 0
-    	net.ipv6.route.max_size = 32768
-    	net.ipv6.route.gc_min_interval = 50
-    	net.ipv6.route.gc_interval = 30
-    	net.ipv6.route.gc_elasticity = 9
-    	net.ipv6.route.mtu_expires = 600
-    	net.ipv6.route.min_adv_mss = 1220
-    	net.ipv6.neigh.default.gc_interval = 30
-    	net.ipv6.neigh.default.base_reachable_time_ms = 30000
-    	net.ipv6.neigh.default.retrans_time_ms = 1000
-    	net.ipv6.neigh.default.unres_qlen = 31
-    	net.ipv6.neigh.default.proxy_qlen = 64
-    	net.ipv6.icmp.ratelimit = 1000
-    	net.ipv6.icmp.ratemask = 0
-    	net.ipv6.icmp.echo_ignore_all = 0" > /etc/sysctl.conf' && sudo sysctl -p
+		net.ipv4.conf.default.arp_ignore = 1" > /etc/sysctl.conf' && sudo sysctl -p
 }
 PATTERN="sysctl.conf.bk*"
 files=($PATTERN)
