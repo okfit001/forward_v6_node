@@ -14,15 +14,15 @@ my_process() {
 		vm.dirty_background_ratio = 5
 		vm.panic_on_oom = 1
 		vm.overcommit_memory = 1
-		vm.min_free_kbytes = 330485
+		vm.min_free_kbytes = 323932
 		
 		net.core.default_qdisc = fq
-		net.core.netdev_max_backlog = 4000
-		net.core.rmem_max = 67108864
-		net.core.wmem_max = 67108864
+		net.core.netdev_max_backlog = 2616
+		net.core.rmem_max = 26843545.6
+		net.core.wmem_max = 26843545.6
 		net.core.rmem_default = 87380
 		net.core.wmem_default = 65536
-		net.core.somaxconn = 2048
+		net.core.somaxconn = 1308
 		net.core.optmem_max = 65536
 		
 		net.ipv4.tcp_fastopen = 3
@@ -34,17 +34,17 @@ my_process() {
 		net.ipv4.tcp_sack = 1
 		net.ipv4.tcp_fack = 0
 		
-		net.ipv4.tcp_rmem = 8192 87380 67108864
-		net.ipv4.tcp_wmem = 8192 65536 67108864
+		net.ipv4.tcp_rmem = 8192 87380 26843545.6
+		net.ipv4.tcp_wmem = 8192 65536 26843545.6
 		net.ipv4.tcp_mtu_probing = 1
 		net.ipv4.tcp_congestion_control = bbr
 		net.ipv4.tcp_notsent_lowat = 4096
 		net.ipv4.tcp_window_scaling = 1
-		net.ipv4.tcp_adv_win_scale = 4
+		net.ipv4.tcp_adv_win_scale = 3
 		net.ipv4.tcp_moderate_rcvbuf = 1
 		net.ipv4.tcp_no_metrics_save = 0
 		
-		net.ipv4.tcp_max_syn_backlog = 8850
+		net.ipv4.tcp_max_syn_backlog = 5233
 		net.ipv4.tcp_max_orphans = 65536
 		net.ipv4.tcp_synack_retries = 2
 		net.ipv4.tcp_syn_retries = 3
