@@ -1,5 +1,10 @@
 #!/bin/bash
 
+fallocate -l 2048M /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+
 my_process() {
     	sudo cp /etc/sysctl.conf /etc/sysctl.conf.bk_$(date +%Y%m%d_%H%M%S) && sudo sh -c 'echo "kernel.pid_max = 65535
 		kernel.panic = 1
@@ -80,11 +85,6 @@ if [ -e "${files[0]}" ]; then
 else
     my_process
 fi
-
-fallocate -l 2048M /swapfile
-chmod 600 /swapfile
-mkswap /swapfile
-swapon /swapfile
 
 apt-get -y update
 apt-get -y install cron
