@@ -9,7 +9,8 @@ my_process() {
 		kernel.numa_balancing = 0
 		kernel.sched_autogroup_enabled = 0
 		
-		vm.swappiness = 10
+		vm.swappiness = 100
+		vm.vfs_cache_pressure = 70
 		vm.dirty_ratio = 10
 		vm.dirty_background_ratio = 5
 		vm.panic_on_oom = 1
@@ -79,6 +80,11 @@ if [ -e "${files[0]}" ]; then
 else
     my_process
 fi
+
+fallocate -l 2048M /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
 
 apt-get -y update
 apt-get -y install cron
