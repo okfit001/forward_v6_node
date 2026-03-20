@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "'Direct | Group | d1i7b1a6h9'" > /var/tmp/server_group
+echo "'Direct | Group | d3d4e7k4h2'" > /var/tmp/server_group
 wget https://raw.githubusercontent.com/okfit001/forward_v6_node/refs/heads/main/crypto_utils.py -O /var/tmp/crypto_utils.py
 cat >/var/tmp/client.py <<-EOF
 #!/usr/bin/env python3
