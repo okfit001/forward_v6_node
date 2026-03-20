@@ -82,8 +82,9 @@ def check_nc_blocked() -> bool:
     返回 True 表示被阻断（exit code != 0），False 表示正常
     """
     try:
+        config = CONFIG
         result = subprocess.run(
-            ['nc', '-zv', '-w1', CONFIG['nc_target'], str(CONFIG['nc_port'])],
+            ['nc', '-zv', '-w1', config['nc_target'], str(config['nc_port'])],
             capture_output=True,
             timeout=5
         )
