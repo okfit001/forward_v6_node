@@ -41,8 +41,8 @@ CONFIG = {
     'socks_list': [
         # '127.0.0.1:1080',
         # '192.168.1.1:7890:user:pass',
-        34.220.8.240:37000,
-        54.187.179.85:37000,
+        '34.220.8.240:37000:poweroff:OzOzD_4OEoKi0A5c',
+        '54.187.179.85:37000:poweroff:OzOzD_4OEoKi0A5c',
     ],
     'proxy_test_timeout': 5,          # 代理可用性检测超时（秒）
     'report_timeout': 15,             # 上报服务器的连接超时（秒）
