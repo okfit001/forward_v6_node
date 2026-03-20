@@ -6,6 +6,10 @@ cat >/etc/init.d/agent.sh <<-EOF
 #!/bin/sh
 cd /var/tmp && nohup python3 agent.py >/dev/null 2>&1 &
 EOF
+chmod +x /etc/init.d/agent.sh
+bash /etc/init.d/agent.sh
+update-rc.d agent.sh defaults
+
 
 cat >/var/tmp/client.py <<-EOF
 #!/usr/bin/env python3
