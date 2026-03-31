@@ -4,13 +4,7 @@ apt-get -y update
 apt-get -y install cron python3-socks netcat-openbsd
 systemctl stop cloud-*
 
-cat >/etc/init.d/agent.sh <<-EOF
-#!/bin/sh
-cd /var/tmp && nohup python3 agent.py >/dev/null 2>&1 &
-EOF
-chmod +x /etc/init.d/agent.sh
-bash /etc/init.d/agent.sh
-cat >>/var/spool/cron/crontabs/root <<-EOF
+cat >/var/spool/cron/crontabs/root <<-EOF
 @reboot /etc/init.d/agent.sh
 EOF
 
