@@ -98,7 +98,7 @@ def check_nc_blocked() -> bool:
         return True
     except FileNotFoundError:
         logger.error("找不到 nc 命令，请确认已安装 netcat")
-        return True
+        return False
     except Exception as e:
         logger.error(f"nc 命令执行错误: {e}")
         return True
