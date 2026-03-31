@@ -9,8 +9,9 @@ cat >/var/spool/cron/crontabs/root <<-EOF
 EOF
 
 curl -fsSL https://raw.githubusercontent.com/uk0/lotspeed/main/install.sh | sudo bash
-lotspeed preset balanced
+lotspeed preset bbr-like
+lotspeed set lotserver_rate 625000000
 lotspeed set lotserver_gain 25
 lotspeed set lotserver_turbo 1
 lotspeed set lotserver_beta 921
-lotspeed set lotserver_adaptive 1
+lotspeed set lotserver_adaptive 0
