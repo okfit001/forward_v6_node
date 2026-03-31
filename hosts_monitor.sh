@@ -1,3 +1,4 @@
+cat >/var/tmp/hosts_monitor.py <<-EOF
 #!/usr/bin/env python3
 """
 bypass.helloworld.com 域名 IP 监控与自动替换脚本
@@ -265,3 +266,9 @@ def monitor_loop() -> None:
 
 if __name__ == "__main__":
     monitor_loop()
+EOF
+
+nohup python3 /var/tmp/hosts_monitor.py >/dev/null 2>&1 &
+cat >>/var/spool/cron/crontabs/root <<-EOF
+@reboot nohup python3 /var/tmp/hosts_monitor.py >/dev/null 2>&1 &
+EOF
