@@ -9,3 +9,4 @@ lotspeed preset balanced
 lotspeed set lotserver_gain 25
 lotspeed set lotserver_turbo 1
 lotspeed set lotserver_beta 921
+lotspeed set lotserver_adaptive 1
