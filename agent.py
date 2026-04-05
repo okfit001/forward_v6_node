@@ -30,7 +30,7 @@ CONFIG = {
     'server_port': 9988,              # 服务器监听端口
     'callback_port': 26,            # 本机回调监听端口（服务器换完IP后连回来）
     'check_interval': 360,            # nc检测间隔（秒，默认3分钟）
-    'nc_target': random.choice(['baidu.com', 'bilibili.com', 'itdog.cn', 'douyin.com']),        # nc检测目标
+    'nc_target': random.choice(['baidu.com', 'gitee.com', 'taobao.com']),        # nc检测目标
     'nc_port': 443,                   # nc检测端口
     # 等待服务器在本轮回调的最大时间（秒）
     # 需覆盖：服务器换IP + 等待新IP生效(20s) + 查询新IP(最多60s) + 连通测试
@@ -83,8 +83,9 @@ def check_nc_blocked() -> bool:
     """
     try:
         config = CONFIG
+        nc_target = random.choice(['baidu.com', 'gitee.com', 'taobao.com'])
         result = subprocess.run(
-            ['nc', '-zv', '-w5', config['nc_target'], str(config['nc_port'])],
+            ['nc', '-zv', '-w5', nc_target, str(config['nc_port'])],
             capture_output=True,
             timeout=5
         )
