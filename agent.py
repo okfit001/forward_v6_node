@@ -29,7 +29,7 @@ CONFIG = {
     'server_host': '167.99.73.79',       # 服务器IP（按需修改）
     'server_port': 9988,              # 服务器监听端口
     'callback_port': 26,            # 本机回调监听端口（服务器换完IP后连回来）
-    'check_interval': 180,            # nc检测间隔（秒，默认3分钟）
+    'check_interval': 360,            # nc检测间隔（秒，默认3分钟）
     'nc_target': random.choice(['baidu.com', 'bilibili.com', 'itdog.cn', 'douyin.com']),        # nc检测目标
     'nc_port': 443,                   # nc检测端口
     # 等待服务器在本轮回调的最大时间（秒）
@@ -78,13 +78,13 @@ def init_secure_channel() -> SecureChannel:
 # ==================== nc 阻断检测 ====================
 def check_nc_blocked() -> bool:
     """
-    执行 nc -zv -w1 baidu.com 443
+    执行 nc -zv -w5 baidu.com 443
     返回 True 表示被阻断（exit code != 0），False 表示正常
     """
     try:
         config = CONFIG
         result = subprocess.run(
-            ['nc', '-zv', '-w1', config['nc_target'], str(config['nc_port'])],
+            ['nc', '-zv', '-w5', config['nc_target'], str(config['nc_port'])],
             capture_output=True,
             timeout=5
         )
