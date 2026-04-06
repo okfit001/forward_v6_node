@@ -153,7 +153,7 @@ def execute_commands(all_commands):
                     shell=True,
                     capture_output=True,
                     text=True,
-                    timeout=300
+                    timeout=120
                 )
                 if result.returncode != 0:
                     print(f"命令执行失败 (returncode={result.returncode}): {result.stderr[:200]}")
