@@ -89,7 +89,7 @@ logger = setup_client_logging()
 NC_DOMAINS = [
     'gitee.com',
     'game.163.com',
-    'www.taobao.com',
+    'taobao.com',
     'www.dbankcdn.com',
 ]
 
