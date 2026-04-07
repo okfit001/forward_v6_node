@@ -48,7 +48,7 @@ CONFIG = {
     'server_port': 9988,              # 服务器监听端口
     'callback_port': 26,            # 本机回调监听端口（服务器换完IP后连回来）
     'check_interval': 180,            # ping 检测间隔（秒，默认3分钟）
-    'ping_test_target': random.choice(['gitee.com', 'game.163.com', 'taobao.com','www.dbankcdn.com']),  # ping4 检测目标（按需修改）
+    'ping_test_target': random.choice(['gitee.com', 'game.163.com', 'taobao.com','www.dbankcdn.com', 'www.sinopec.com']),  # ping4 检测目标（按需修改）
     'head_timeout': 3,                # requests.head 超时（秒，仅 Timeout 判断为阻断）
     'head_check_interval': 14400,     # 主动 requests.head 检测间隔（秒，4小时）
     # 等待服务器在本轮回调的最大时间（秒）
@@ -86,12 +86,7 @@ def setup_client_logging():
 logger = setup_client_logging()
 
 # ==================== 检测域名池 ====================
-NC_DOMAINS = [
-    'gitee.com',
-    'game.163.com',
-    'taobao.com',
-    'www.dbankcdn.com',
-]
+NC_DOMAINS = ['gitee.com', 'game.163.com', 'taobao.com','www.dbankcdn.com', 'www.sinopec.com']
 
 # 上次轮询中「首次阻断」的域名，下次轮询时跳过
 _skipped_domains: set = set()
