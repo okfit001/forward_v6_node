@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+IP阻断检测客户端 (C/S架构)
+
+功能：
+1. 每3分钟执行 nc -zv4 -w3 <domain> 443，域名从候选列表随机选取
+2. 首次检测阻断后，用另一个域名二次确认；二次确认也阻断才上报
+   - 首次阻断的域名在下次轮询时跳过
+   - 若可用域名为空（全被跳过）或无其他域名可做二次确认，则直接上报
+3. 启动回调监听端口，等待服务器在换IP后发来重检指令
+4. 执行重检并将结果返回服务器（支持多轮，对应服务器最多1次重试）
+5. 连接服务器支持 SOCKS5 代理，自动筛选可用代理并随机选取
+"""
 
 import os
 import sys
@@ -30,14 +42,15 @@ CONFIG = {
     'server_port': 9988,              # 服务器监听端口
     'callback_port': 26,            # 本机回调监听端口（服务器换完IP后连回来）
     'check_interval': 360,            # nc检测间隔（秒，默认3分钟）
-    'nc_target': random.choice(['baidu.com', 'gitee.com', 'taobao.com']),        # nc检测目标
     'nc_port': 443,                   # nc检测端口
     # 等待服务器在本轮回调的最大时间（秒）
     # 需覆盖：服务器换IP + 等待新IP生效(20s) + 查询新IP(最多60s) + 连通测试
     # 两轮合计约 300s
     'callback_session_timeout': 300,
+    # SOCKS5代理列表，格式：
     #   'host:port'
     #   'host:port:username:password'
+    # 为空列表则直连
     'socks_list': [
         # '127.0.0.1:1080',
         # '192.168.1.1:7890:user:pass',
@@ -64,6 +77,17 @@ def setup_client_logging():
 
 logger = setup_client_logging()
 
+# ==================== 检测域名池 ====================
+NC_DOMAINS = [
+    'www.baidu.com',
+    'game.163.com',
+    'www.taobao.com',
+    'www.dbankcdn.com',
+]
+
+# 上次轮询中「首次阻断」的域名，下次轮询时跳过
+_skipped_domains: set = set()
+
 
 # ==================== 安全通道 ====================
 def init_secure_channel() -> SecureChannel:
@@ -75,34 +99,86 @@ def init_secure_channel() -> SecureChannel:
     return SecureChannel(key, token)
 
 
-# ==================== nc 阻断检测 ====================
-def check_nc_blocked() -> bool:
+# ==================== nc 检测原语 ====================
+def run_nc(domain: str, port: int) -> bool:
     """
-    执行 nc -zv -w5 baidu.com 443
-    返回 True 表示被阻断（exit code != 0），False 表示正常
+    执行 nc -zv4 -w3 <domain> <port>。
+    返回 True 表示被阻断（exit code != 0 或超时），False 表示正常。
     """
     try:
-        config = CONFIG
-        nc_target = random.choice(['baidu.com', 'gitee.com', 'taobao.com'])
         result = subprocess.run(
-            ['nc', '-zv', '-w5', nc_target, str(config['nc_port'])],
+            ['nc', '-zv4', '-w3', domain, str(port)],
             capture_output=True,
-            timeout=5
+            timeout=5,
         )
         if result.returncode != 0:
-            logger.warning(f"nc 检测：被阻断 (exit={result.returncode})")
+            logger.warning(f"nc 检测 {domain}: 阻断 (exit={result.returncode})")
             return True
-        logger.debug("nc 检测：正常")
+        logger.debug(f"nc 检测 {domain}: 正常")
         return False
     except subprocess.TimeoutExpired:
-        logger.warning("nc 命令超时，判定为阻断")
+        logger.warning(f"nc 检测 {domain}: 超时，判定为阻断")
         return True
     except FileNotFoundError:
         logger.error("找不到 nc 命令，请确认已安装 netcat")
-        return False
+        return True
     except Exception as e:
         logger.error(f"nc 命令执行错误: {e}")
         return True
+
+
+def check_and_confirm_blocked() -> bool:
+    """
+    两阶段检测，返回 True 表示确认阻断（需上报），False 表示正常。
+    同时维护全局 _skipped_domains 跳过列表。
+
+    流程：
+    1. 从 NC_DOMAINS 中排除 _skipped_domains，得到 available 列表
+       - 若 available 为空 → 直接上报（所有域名均被跳过）
+    2. 随机选 first_domain，执行 run_nc
+       - 若正常 → 清空 _skipped_domains，返回 False
+    3. first_domain 阻断 → 记入 _skipped_domains（下次轮询跳过）
+    4. 从 NC_DOMAINS 中排除 first_domain，得到 second_pool
+       - 若 second_pool 为空 → 直接上报（无其他域名可做二次确认）
+    5. 随机选 second_domain，执行 run_nc
+       - 二次也阻断 → 上报（返回 True）
+       - 二次正常   → 判定为域名级问题，不上报（返回 False）
+    """
+    global _skipped_domains
+
+    # 步骤1：排除跳过域名
+    available = [d for d in NC_DOMAINS if d not in _skipped_domains]
+    if not available:
+        logger.warning(f"所有域名均在跳过列表 {_skipped_domains}，直接上报")
+        _skipped_domains.clear()
+        return True
+
+    # 步骤2：第一次检测
+    first_domain = random.choice(available)
+    logger.info(f"第一次检测: {first_domain}")
+    if not run_nc(first_domain, CONFIG['nc_port']):
+        _skipped_domains.clear()
+        return False
+
+    # 步骤3：记录首次阻断域名，下次跳过
+    logger.warning(f"第一次检测阻断: {first_domain}，已记录，下次轮询跳过")
+    _skipped_domains = {first_domain}
+
+    # 步骤4：二次确认域名池
+    second_pool = [d for d in NC_DOMAINS if d != first_domain]
+    if not second_pool:
+        logger.warning("无其他域名可做二次确认，直接上报")
+        return True
+
+    # 步骤5：二次确认
+    second_domain = random.choice(second_pool)
+    logger.info(f"二次确认检测: {second_domain}")
+    if run_nc(second_domain, CONFIG['nc_port']):
+        logger.warning(f"二次确认阻断: {second_domain}，确认被阻断")
+        return True
+
+    logger.info(f"二次确认正常: {second_domain}，判定为域名级问题，不上报")
+    return False
 
 
 # ==================== 获取公网IP ====================
@@ -269,7 +345,8 @@ def callback_listener_session(sc: SecureChannel, result_q: queue.Queue, max_roun
                     continue
 
                 logger.info("执行 nc 重新检测...")
-                blocked = check_nc_blocked()
+                recheck_domain = random.choice(NC_DOMAINS)
+                blocked = run_nc(recheck_domain, CONFIG['nc_port'])
                 rounds_done += 1
 
                 response = {
@@ -314,7 +391,7 @@ def callback_listener_session(sc: SecureChannel, result_q: queue.Queue, max_roun
 def main():
     logger.info("=" * 50)
     logger.info("IP阻断检测客户端启动")
-    logger.info(f"检测目标: nc -zv -w1 {CONFIG['nc_target']} {CONFIG['nc_port']}")
+    logger.info(f"检测目标: nc -zv4 -w3 <随机域名> {CONFIG['nc_port']}（候选: {NC_DOMAINS}）")
     logger.info(f"检测间隔: {CONFIG['check_interval']}s，回调端口: {CONFIG['callback_port']}")
     logger.info("=" * 50)
 
@@ -326,10 +403,10 @@ def main():
 
     while True:
         try:
-            blocked = check_nc_blocked()
+            blocked = check_and_confirm_blocked()
 
             if blocked:
-                logger.warning("检测到阻断，准备上报服务器...")
+                logger.warning("检测确认阻断，准备上报服务器...")
                 public_ip = get_public_ip()
                 logger.info(f"当前公网IP: {public_ip}")
 
