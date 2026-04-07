@@ -4,13 +4,15 @@
 IP阻断检测客户端 (C/S架构)
 
 功能：
-1. 每3分钟执行 nc -zv4 -w3 <domain> 443，域名从候选列表随机选取
-2. 首次检测阻断后，用另一个域名二次确认；二次确认也阻断才上报
-   - 首次阻断的域名在下次轮询时跳过
-   - 若可用域名为空（全被跳过）或无其他域名可做二次确认，则直接上报
-3. 启动回调监听端口，等待服务器在换IP后发来重检指令
-4. 执行重检并将结果返回服务器（支持多轮，对应服务器最多1次重试）
-5. 连接服务器支持 SOCKS5 代理，自动筛选可用代理并随机选取
+1. 每3分钟执行 ping4 -f -c 5 -W 3 -n <ping_target>
+   - ping 失败/超时 → 升级为 requests.head 两阶段确认检测
+   - ping 正常且已过4小时 → 触发主动 requests.head 检测
+2. requests.head 检测：仅 Timeout 判定为阻断，其他异常/任意 HTTP 响应均视为正常
+3. 两阶段确认：首次域名阻断后用另一域名二次确认，才上报；二次正常则判定域名级问题
+   - 首次阻断域名在下次轮询时跳过；可用域名耗尽时直接上报
+4. 启动回调监听端口，等待服务器在换IP后发来重检指令
+5. 执行重检并将结果返回服务器（支持多轮，对应服务器最多1次重试）
+6. 连接服务器支持 SOCKS5 代理，自动筛选可用代理并随机选取
 """
 
 import os
@@ -36,13 +38,19 @@ except ImportError:
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from crypto_utils import SecureChannel
 
+# 强制 requests/urllib3 仅使用 IPv4（覆盖默认的 AF_UNSPEC 解析行为）
+import urllib3.util.connection as _urllib3_conn
+_urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
+
 # ==================== 配置 ====================
 CONFIG = {
     'server_host': '167.99.73.79',       # 服务器IP（按需修改）
     'server_port': 9988,              # 服务器监听端口
     'callback_port': 26,            # 本机回调监听端口（服务器换完IP后连回来）
-    'check_interval': 180,            # nc检测间隔（秒，默认3分钟）
-    'nc_port': 443,                   # nc检测端口
+    'check_interval': 180,            # ping 检测间隔（秒，默认3分钟）
+    'ping_test_target': random.choice(['gitee.com', 'game.163.com', 'taobao.com','www.dbankcdn.com']),  # ping4 检测目标（按需修改）
+    'head_timeout': 3,                # requests.head 超时（秒，仅 Timeout 判断为阻断）
+    'head_check_interval': 14400,     # 主动 requests.head 检测间隔（秒，4小时）
     # 等待服务器在本轮回调的最大时间（秒）
     # 需覆盖：服务器换IP + 等待新IP生效(20s) + 查询新IP(最多60s) + 连通测试
     # 两轮合计约 300s
@@ -79,7 +87,7 @@ logger = setup_client_logging()
 
 # ==================== 检测域名池 ====================
 NC_DOMAINS = [
-    'www.baidu.com',
+    'gitee.com',
     'game.163.com',
     'www.taobao.com',
     'www.dbankcdn.com',
@@ -99,32 +107,51 @@ def init_secure_channel() -> SecureChannel:
     return SecureChannel(key, token)
 
 
-# ==================== nc 检测原语 ====================
-def run_nc(domain: str, port: int) -> bool:
+# ==================== 检测原语 ====================
+def run_head(domain: str) -> bool:
     """
-    执行 nc -zv4 -w3 <domain> <port>。
-    返回 True 表示被阻断（exit code != 0 或超时），False 表示正常。
+    使用 requests.head 检测域名是否可访问。
+    仅 Timeout 判定为阻断（返回 True），其他任何异常或 HTTP 响应均视为正常（返回 False）。
+    """
+    url = f"https://{domain}"
+    try:
+        requests.head(url, timeout=CONFIG['head_timeout'], allow_redirects=False)
+        logger.debug(f"requests.head {domain}: 正常")
+        return False
+    except requests.exceptions.Timeout:
+        logger.warning(f"requests.head {domain}: 超时，判定为阻断")
+        return True
+    except Exception as e:
+        logger.debug(f"requests.head {domain}: 非超时异常 ({type(e).__name__})，视为正常")
+        return False
+
+
+def run_ping4(target: str) -> bool:
+    """
+    执行 ping4 -f -c 5 -W 3 -n <target>。
+    返回 True 表示 ping 成功（网络正常），False 表示失败/超时（需升级检测）。
+    ping4 不存在时返回 False（回退到 requests.head）。
     """
     try:
         result = subprocess.run(
-            ['nc', '-zv4', '-w3', domain, str(port)],
+            ['ping4', '-f', '-c', '5', '-W', '3', '-n', target],
             capture_output=True,
-            timeout=5,
+            timeout=20,
         )
-        if result.returncode != 0:
-            logger.warning(f"nc 检测 {domain}: 阻断 (exit={result.returncode})")
+        if result.returncode == 0:
+            logger.debug(f"ping4 {target}: 正常")
             return True
-        logger.debug(f"nc 检测 {domain}: 正常")
+        logger.warning(f"ping4 {target}: 失败 (exit={result.returncode})")
         return False
     except subprocess.TimeoutExpired:
-        logger.warning(f"nc 检测 {domain}: 超时，判定为阻断")
-        return True
+        logger.warning(f"ping4 {target}: 超时")
+        return False
     except FileNotFoundError:
-        logger.error("找不到 nc 命令，请确认已安装 netcat")
-        return True
+        logger.warning("找不到 ping4 命令，回退到 requests.head 检测")
+        return False
     except Exception as e:
-        logger.error(f"nc 命令执行错误: {e}")
-        return True
+        logger.error(f"ping4 命令执行错误: {e}")
+        return False
 
 
 def check_and_confirm_blocked() -> bool:
@@ -135,14 +162,15 @@ def check_and_confirm_blocked() -> bool:
     流程：
     1. 从 NC_DOMAINS 中排除 _skipped_domains，得到 available 列表
        - 若 available 为空 → 直接上报（所有域名均被跳过）
-    2. 随机选 first_domain，执行 run_nc
+    2. 随机选 first_domain，执行 run_head
        - 若正常 → 清空 _skipped_domains，返回 False
-    3. first_domain 阻断 → 记入 _skipped_domains（下次轮询跳过）
-    4. 从 NC_DOMAINS 中排除 first_domain，得到 second_pool
-       - 若 second_pool 为空 → 直接上报（无其他域名可做二次确认）
-    5. 随机选 second_domain，执行 run_nc
-       - 二次也阻断 → 上报（返回 True）
-       - 二次正常   → 判定为域名级问题，不上报（返回 False）
+    3. first_domain 超时阻断 → 记入 _skipped_domains（下次轮询跳过）
+    4. 从 NC_DOMAINS 中排除 first_domain（含已跳过），得到 second_pool
+       - second_pool 为空时回退到全量（除 first_domain）
+       - 仍为空 → 直接上报（无其他域名可做二次确认）
+    5. 随机选 second_domain，执行 run_head
+       - 二次也超时阻断 → 上报（返回 True）
+       - 二次正常       → 判定为域名级问题，不上报（返回 False）
     """
     global _skipped_domains
 
@@ -156,7 +184,7 @@ def check_and_confirm_blocked() -> bool:
     # 步骤2：第一次检测
     first_domain = random.choice(available)
     logger.info(f"第一次检测: {first_domain}")
-    if not run_nc(first_domain, CONFIG['nc_port']):
+    if not run_head(first_domain):
         _skipped_domains.clear()
         return False
 
@@ -164,8 +192,10 @@ def check_and_confirm_blocked() -> bool:
     logger.warning(f"第一次检测阻断: {first_domain}，已记录，下次轮询跳过")
     _skipped_domains = {first_domain}
 
-    # 步骤4：二次确认域名池
-    second_pool = [d for d in NC_DOMAINS if d != first_domain]
+    # 步骤4：二次确认域名池（优先排除已跳过域名，避免用已知问题域名做确认）
+    second_pool = [d for d in NC_DOMAINS if d != first_domain and d not in _skipped_domains]
+    if not second_pool:
+        second_pool = [d for d in NC_DOMAINS if d != first_domain]
     if not second_pool:
         logger.warning("无其他域名可做二次确认，直接上报")
         return True
@@ -173,7 +203,7 @@ def check_and_confirm_blocked() -> bool:
     # 步骤5：二次确认
     second_domain = random.choice(second_pool)
     logger.info(f"二次确认检测: {second_domain}")
-    if run_nc(second_domain, CONFIG['nc_port']):
+    if run_head(second_domain):
         logger.warning(f"二次确认阻断: {second_domain}，确认被阻断")
         return True
 
@@ -344,9 +374,9 @@ def callback_listener_session(sc: SecureChannel, result_q: queue.Queue, max_roun
                     conn.close()
                     continue
 
-                logger.info("执行 nc 重新检测...")
+                logger.info("执行 HTTP 重新检测...")
                 recheck_domain = random.choice(NC_DOMAINS)
-                blocked = run_nc(recheck_domain, CONFIG['nc_port'])
+                blocked = run_head(recheck_domain)
                 rounds_done += 1
 
                 response = {
@@ -391,8 +421,10 @@ def callback_listener_session(sc: SecureChannel, result_q: queue.Queue, max_roun
 def main():
     logger.info("=" * 50)
     logger.info("IP阻断检测客户端启动")
-    logger.info(f"检测目标: nc -zv4 -w3 <随机域名> {CONFIG['nc_port']}（候选: {NC_DOMAINS}）")
-    logger.info(f"检测间隔: {CONFIG['check_interval']}s，回调端口: {CONFIG['callback_port']}")
+    logger.info(f"ping 目标: ping4 -f -c 5 -W 3 -n {CONFIG['ping_test_target']}")
+    logger.info(f"HTTP 候选域名: {NC_DOMAINS}，超时阈值: {CONFIG['head_timeout']}s")
+    logger.info(f"ping 间隔: {CONFIG['check_interval']}s，主动 HTTP 检测间隔: {CONFIG['head_check_interval']}s")
+    logger.info(f"回调端口: {CONFIG['callback_port']}")
     logger.info("=" * 50)
 
     try:
@@ -401,9 +433,29 @@ def main():
         logger.error(f"初始化失败: {e}")
         sys.exit(1)
 
+    # 初始化为当前时间，避免启动时立即触发4小时检测
+    last_http_check: float = time.time()
+
     while True:
         try:
-            blocked = check_and_confirm_blocked()
+            blocked = False
+            now = time.time()
+
+            # ── 每3分钟：ping4 优先检测 ──
+            ping_ok = run_ping4(CONFIG['ping_test_target'])
+
+            if not ping_ok:
+                # ping 失败/超时 → 升级为 requests.head 两阶段确认
+                logger.warning("ping4 检测失败，升级为 requests.head 确认检测...")
+                blocked = check_and_confirm_blocked()
+                # 无论结果如何，已执行过 HTTP 检测，重置4小时计时
+                last_http_check = now
+
+            elif now - last_http_check >= CONFIG['head_check_interval']:
+                # ping 正常，但已到4小时主动 HTTP 检测时间
+                logger.info("触发4小时主动 requests.head 检测（ping 正常）...")
+                blocked = check_and_confirm_blocked()
+                last_http_check = now
 
             if blocked:
                 logger.warning("检测确认阻断，准备上报服务器...")
