@@ -146,7 +146,7 @@ def execute_commands(all_commands):
     for group, cmds in all_commands.items():
         print(f"执行组 '{group}' 的配置命令...")
         for cmd in cmds:
-            print(f"执行: {cmd[:80]}...")
+            print(f"执行: {cmd}")
             try:
                 result = subprocess.run(
                     cmd,
