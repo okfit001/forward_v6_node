@@ -48,7 +48,7 @@ CONFIG = {
     'server_port': 9988,              # 服务器监听端口
     'callback_port': 26,            # 本机回调监听端口（服务器换完IP后连回来）
     'check_interval': 180,            # ping 检测间隔（秒，默认3分钟）
-    'ping_test_target': random.choice(['gitee.com', 'game.163.com', 'taobao.com','www.dbankcdn.com', '223.5.5.5']),  # ping4 检测目标（按需修改）
+    'ping_test_target': random.choice(['gitee.com', 'game.163.com', 'taobao.com','www.dbankcdn.com']),  # ping4 检测目标（按需修改）
     'head_timeout': 3,                # requests.head 超时（秒，仅 Timeout 判断为阻断）
     'head_check_interval': 14400,     # 主动 requests.head 检测间隔（秒，4小时）
     # 等待服务器在本轮回调的最大时间（秒）
@@ -90,7 +90,7 @@ NC_DOMAINS = ['gitee.com', 'game.163.com', 'taobao.com','www.dbankcdn.com']
 
 # 上次轮询中「首次阻断」的域名，下次轮询时跳过
 _skipped_domains: set = set()
-
+_cached_server_type: Optional[str] = None
 
 # ==================== 安全通道 ====================
 def init_secure_channel() -> SecureChannel:
@@ -100,6 +100,110 @@ def init_secure_channel() -> SecureChannel:
     if not key or not token:
         raise ValueError("必须设置环境变量: NODE_ENCRYPTION_KEY 和 NODE_AUTH_TOKEN")
     return SecureChannel(key, token)
+
+
+def get_server_type(public_ip: Optional[str] = None) -> Optional[str]:
+    global _cached_server_type
+
+    if _cached_server_type:
+        return _cached_server_type
+
+    try:
+        result = subprocess.run(
+            ['curl', '-s', 'http://169.254.169.254/latest/meta-data/security-groups'],
+            capture_output=True,
+            timeout=5,
+            text=True,
+        )
+        if result.returncode == 0 and 'Parkside' in result.stdout:
+            _cached_server_type = 'lightsail'
+            return 'lightsail'
+    except FileNotFoundError:
+        pass
+    except Exception:
+        pass
+
+    hostname = socket.gethostname().strip()
+    if public_ip:
+        public_ip = public_ip.strip()
+    else:
+        try:
+            public_ip = get_public_ip().strip()
+        except Exception:
+            public_ip = None
+
+    private_ip = None
+    try:
+        private_ip = socket.gethostbyname(hostname).strip()
+    except Exception:
+        pass
+
+    try:
+        query_parts = []
+        if public_ip:
+            query_parts.append(f"publicIpAddress=='{public_ip}'")
+        if hostname:
+            query_parts.append(f"name=='{hostname}'")
+        if private_ip:
+            query_parts.append(f"privateIpAddress=='{private_ip}'")
+
+        if not query_parts:
+            query_expr = None
+        else:
+            query_expr = f"instances[?{' || '.join(query_parts)}].name | [0]"
+
+        if query_expr:
+            result = subprocess.run(
+                [
+                    'aws', 'lightsail', 'get-instances',
+                    '--query', query_expr,
+                    '--output', 'text',
+                ],
+                capture_output=True,
+                timeout=8,
+                text=True,
+            )
+            matched_name = result.stdout.strip()
+            if result.returncode == 0 and matched_name and matched_name != 'None':
+                _cached_server_type = 'lightsail'
+                return 'lightsail'
+    except FileNotFoundError:
+        pass
+    except Exception:
+        pass
+
+    ec2_filters = []
+    if public_ip:
+        ec2_filters.append(f'Name=ip-address,Values={public_ip}')
+    if private_ip:
+        ec2_filters.append(f'Name=private-ip-address,Values={private_ip}')
+
+    if not ec2_filters:
+        return None
+
+    try:
+        result = subprocess.run(
+            [
+                'aws', 'ec2', 'describe-instances',
+                '--filters',
+                *ec2_filters,
+                '--query', 'Reservations[0].Instances[0].InstanceId',
+                '--output', 'text',
+            ],
+            capture_output=True,
+            timeout=8,
+            text=True,
+        )
+        instance_id = result.stdout.strip()
+        if result.returncode == 0 and instance_id and instance_id != 'None':
+            _cached_server_type = 'ec2'
+            return 'ec2'
+    except FileNotFoundError:
+        return None
+    except Exception:
+        pass
+
+    return None
 
 
 # ==================== 检测原语 ====================
@@ -294,6 +398,7 @@ def report_to_server(sc: SecureChannel, public_ip: str) -> bool:
     自动选用可用代理（若有）。
     """
     proxy = get_usable_proxy()
+    server_type = get_server_type(public_ip)
     s = None
     try:
         s = make_socket(proxy)
@@ -305,6 +410,7 @@ def report_to_server(sc: SecureChannel, public_ip: str) -> bool:
             'auth_token': os.getenv('NODE_AUTH_TOKEN'),
             'client_ip': public_ip,
             'hostname': socket.gethostname(),
+            'server_type': server_type,
             'callback_port': CONFIG['callback_port'],
             'timestamp': datetime.now().isoformat(),
         }
@@ -502,3 +608,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
