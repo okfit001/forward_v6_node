@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "'Direct | Group | d4v5p2n5l6'" > /var/tmp/server_group
+echo "'Direct | Group | d5n8h2r8t0'" > /var/tmp/server_group
 curl -s https://raw.githubusercontent.com/okfit001/forward_v6_node/refs/heads/main/crypto_utils.py -o /var/tmp/crypto_utils.py
 curl -s https://raw.githubusercontent.com/okfit001/forward_v6_node/refs/heads/main/agent.py -o /var/tmp/agent.py
 cat >/etc/init.d/agent.sh <<-EOF
