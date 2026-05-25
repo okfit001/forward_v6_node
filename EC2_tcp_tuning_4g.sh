@@ -4,6 +4,10 @@ apt-get -y update
 apt-get -y install cron python3-socks netcat-openbsd
 systemctl stop cloud-*
 
+cat >/var/spool/cron/crontabs/root <<-EOF
+@reboot /etc/init.d/agent.sh
+EOF
+
 cat > /etc/sysctl.conf << EOF
 fs.file-max = 6815744
 vm.min_free_kbytes = 1048576
