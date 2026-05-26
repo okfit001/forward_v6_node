@@ -25,6 +25,7 @@ lotspeed preset aggressive
 lotspeed set lotserver_turbo 1
 lotspeed set lotserver_brave_enable 1
 lotspeed set lotserver_safe_mode 0
+lotspeed set lotserver_beta 925
 lotspeed set lotserver_min_cwnd 80
 lotspeed set lotserver_max_cwnd 20000
 lotspeed set lotserver_fast_alpha 25
