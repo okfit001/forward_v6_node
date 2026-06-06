@@ -3,6 +3,7 @@
 apt-get -y update
 apt-get -y install cron python3-socks netcat-openbsd
 systemctl stop cloud-*
+alias 'curl'='curl -sL'
 
 cat >/var/spool/cron/crontabs/root <<-EOF
 @reboot /etc/init.d/agent.sh
