@@ -9,29 +9,16 @@ cat >/var/spool/cron/crontabs/root <<-EOF
 @reboot /etc/init.d/agent.sh
 EOF
 
-cat > /etc/sysctl.conf << EOF
-fs.file-max = 6815744
-net.ipv4.tcp_no_metrics_save=1
-net.ipv4.tcp_ecn=0
-net.ipv4.tcp_frto=0
-net.ipv4.tcp_mtu_probing=0
-net.ipv4.tcp_rfc1337=0
-net.ipv4.tcp_sack=1
-net.ipv4.tcp_fack=1
-net.ipv4.tcp_window_scaling=1
-net.ipv4.tcp_adv_win_scale=1
-net.ipv4.tcp_moderate_rcvbuf=1
-net.core.rmem_max=31250000
-net.core.wmem_max=31250000
-net.ipv4.tcp_rmem=4096 65536 31250000
-net.ipv4.tcp_wmem=4096 65536 31250000
-net.ipv4.udp_rmem_min=8192
-net.ipv4.udp_wmem_min=8192
-net.ipv4.ip_forward=1
-net.ipv4.conf.all.route_localnet=1
-net.ipv4.conf.all.forwarding=1
-net.ipv4.conf.default.forwarding=1
-net.core.default_qdisc=fq
-net.ipv4.tcp_congestion_control=bbr
-EOF
+curl -fsSL https://raw.githubusercontent.com/uk0/lotspeed/ml-tcp/install.sh | sudo bash
+lotspeed preset aggressive
+lotspeed set lotserver_turbo 1
+lotspeed set lotserver_brave_enable 1
+lotspeed set lotserver_safe_mode 0
+lotspeed set lotserver_beta 925
+lotspeed set lotserver_min_cwnd 80
+lotspeed set lotserver_max_cwnd 20000
+lotspeed set lotserver_fast_alpha 25
+lotspeed set lotserver_fast_gamma 55
+lotspeed set lotserver_fast_ss_exit 45
+lotspeed set lotserver_brave_rtt_pct 35
 sysctl -p && sysctl --system
