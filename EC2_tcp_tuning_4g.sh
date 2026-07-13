@@ -21,5 +21,5 @@ EOF
 #lotspeed set lotserver_fast_gamma 55
 #lotspeed set lotserver_fast_ss_exit 45
 #lotspeed set lotserver_brave_rtt_pct 35
-echo -e "4\n2\nn\n3\ny\ny\n0\n3\n1\n0" | bash <(curl -Ls https://raw.githubusercontent.com/rebecca554owen/toys/main/sh/bbr.sh)
+echo -e "3\n1\ny\ny\n" | bash <(curl -Ls https://raw.githubusercontent.com/rebecca554owen/toys/main/sh/bbr.sh)
 sysctl -p && sysctl --system
