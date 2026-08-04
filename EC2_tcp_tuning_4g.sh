@@ -24,5 +24,5 @@ EOF
 sudo sed -i '/# End of file/i \
 root soft nofile 65535\nroot hard nofile 65535\n* soft nofile 65535\n* hard nofile 65535' /etc/security/limits.conf
 echo -e "3\n1\ny\ny\n0\n" | bash <(curl -Ls https://raw.githubusercontent.com/okfit001/forward_v6_node/refs/heads/main/bbr.sh)
-echo fs.file-max=1048576 >> /etc/sysctl.conf
+echo fs.file-max=2097152 >> /etc/sysctl.conf
 sysctl -p && sysctl --system
